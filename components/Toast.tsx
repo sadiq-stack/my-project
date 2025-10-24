@@ -1,0 +1,184 @@
+/**
+ * Toast Notification Component
+ * Location: /components/Toast.tsx
+ * Purpose: Global toast notification system for user feedback.
+ * Provides success, error, warning, and info notifications.
+ */
+
+'use client'
+
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+
+type ToastType = 'success' | 'error' | 'warning' | 'info'
+
+interface Toast {
+  id: string
+  type: ToastType
+  message: string
+  duration?: number
+}
+
+interface ToastContextType {
+  showToast: (type: ToastType, message: string, duration?: number) => void
+  success: (message: string, duration?: number) => void
+  error: (message: string, duration?: number) => void
+  warning: (message: string, duration?: number) => void
+  info: (message: string, duration?: number) => void
+}
+
+const ToastContext = createContext<ToastContextType | undefined>(undefined)
+
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<Toast[]>([])
+
+  const showToast = useCallback((type: ToastType, message: string, duration: number = 5000) => {
+    const id = Math.random().toString(36).substr(2, 9)
+    const toast: Toast = { id, type, message, duration }
+
+    setToasts((prev) => [...prev, toast])
+
+    if (duration > 0) {
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id))
+      }, duration)
+    }
+  }, [])
+
+  const success = useCallback((message: string, duration?: number) => {
+    showToast('success', message, duration)
+  }, [showToast])
+
+  const error = useCallback((message: string, duration?: number) => {
+    showToast('error', message, duration)
+  }, [showToast])
+
+  const warning = useCallback((message: string, duration?: number) => {
+    showToast('warning', message, duration)
+  }, [showToast])
+
+  const info = useCallback((message: string, duration?: number) => {
+    showToast('info', message, duration)
+  }, [showToast])
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id))
+  }
+
+  const getToastClass = (type: ToastType): string => {
+    switch (type) {
+      case 'success':
+        return 'alert-success'
+      case 'error':
+        return 'alert-error'
+      case 'warning':
+        return 'alert-warning'
+      case 'info':
+        return 'alert-info'
+      default:
+        return 'alert-info'
+    }
+  }
+
+  const getToastIcon = (type: ToastType): ReactNode => {
+    switch (type) {
+      case 'success':
+        return (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        )
+      case 'error':
+        return (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        )
+      case 'warning':
+        return (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+        )
+      case 'info':
+        return (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            className="stroke-current shrink-0 w-6 h-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        )
+    }
+  }
+
+  return (
+    <ToastContext.Provider value={{ showToast, success, error, warning, info }}>
+      {children}
+      
+      {/* Toast Container */}
+      <div className="toast toast-top toast-end z-[9999]" aria-live="polite" aria-atomic="true">
+        {toasts.map((toast) => (
+          <div key={toast.id} className={`alert ${getToastClass(toast.type)} shadow-lg`}>
+            <div className="flex items-center gap-2">
+              {getToastIcon(toast.type)}
+              <span>{toast.message}</span>
+            </div>
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="btn btn-ghost btn-sm btn-circle"
+              aria-label="Close notification"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+    </ToastContext.Provider>
+  )
+}
+
+export function useToast() {
+  const context = useContext(ToastContext)
+  if (!context) {
+    throw new Error('useToast must be used within a ToastProvider')
+  }
+  return context
+}
+
